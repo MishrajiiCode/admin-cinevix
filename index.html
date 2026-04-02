@@ -102,6 +102,16 @@
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
+        select {
+            padding: 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            width: 100%;
+            background-color: #f8fafc;
+        }
+
         button {
             width: 100%;
             padding: 16px;
@@ -217,7 +227,8 @@
 
         .platform-badge.youtube { background: #fee2e2; color: #dc2626; }
         .platform-badge.drive { background: #dbeafe; color: #2563eb; }
-        }
+        .platform-badge.study { background: #fef08a; color: #854d0e; }
+        .platform-badge.entertainment { background: #e9d5ff; color: #7e22ce; }
 
         .video-actions {
             display: flex;
@@ -303,6 +314,13 @@
                         <input type="text" id="vidThumb" placeholder="e.g. https://example.com/image.jpg">
                     </div>
                     <div class="input-field">
+                        <label for="vidCategory">Category</label>
+                        <select id="vidCategory">
+                            <option value="entertainment">Entertainment</option>
+                            <option value="study">Study</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
                         <label for="driveLink">Video Link (YouTube or Google Drive)</label>
                         <input type="text" id="driveLink" placeholder="Paste YouTube or Google Drive link here">
                     </div>
@@ -354,11 +372,12 @@
             }, 4000);
         }
 
-        function enterEditMode(id, title, thumbnail, originalLink) {
+        function enterEditMode(id, title, thumbnail, originalLink, category) {
             currentEditId = id;
             document.getElementById('formTitle').textContent = "Edit Video";
             document.getElementById('vidTitle').value = title;
             document.getElementById('vidThumb').value = thumbnail;
+            document.getElementById('vidCategory').value = category || 'entertainment';
             document.getElementById('driveLink').value = originalLink;
             addBtn.textContent = 'Update Video';
             cancelBtn.style.display = 'block';
@@ -377,6 +396,7 @@
         addBtn.addEventListener('click', async () => {
             const title = document.getElementById('vidTitle').value.trim();
             const thumbnail = document.getElementById('vidThumb').value.trim();
+            const category = document.getElementById('vidCategory').value;
             const inputUrl = document.getElementById('driveLink').value.trim();
 
             if (!title || !thumbnail || !inputUrl) {
@@ -407,7 +427,7 @@
                     throw new Error("Invalid Link format. Please provide a valid YouTube or Google Drive link.");
                 }
 
-                const videoData = { title, thumbnail, videoId, platform, driveVideoId: platform === 'drive' ? videoId : null };
+                const videoData = { title, thumbnail, videoId, platform, driveVideoId: platform === 'drive' ? videoId : null, category };
 
                 if (currentEditId) {
                     // Update existing video
@@ -458,6 +478,7 @@
                         <div class="video-details">
                             <span class="video-title">${data.title}</span>
                             <span class="platform-badge ${data.platform}">${data.platform}</span>
+                            <span class="platform-badge ${data.category || 'entertainment'}">${data.category === 'study' ? 'Study' : 'Entertainment'}</span>
                         </div>
                     </div>
                     <div class="video-actions">
@@ -479,7 +500,7 @@
                 `;
 
                 item.querySelector('.btn-edit').addEventListener('click', () => {
-                    enterEditMode(id, data.title, data.thumbnail, originalLink);
+                    enterEditMode(id, data.title, data.thumbnail, originalLink, data.category);
                 });
 
                 item.querySelector('.btn-delete').addEventListener('click', async () => {
