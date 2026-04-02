@@ -229,6 +229,7 @@
         .platform-badge.drive { background: #dbeafe; color: #2563eb; }
         .platform-badge.study { background: #fef08a; color: #854d0e; }
         .platform-badge.entertainment { background: #e9d5ff; color: #7e22ce; }
+        .platform-badge.views { background: #e2e8f0; color: #475569; }
 
         .video-actions {
             display: flex;
@@ -436,7 +437,7 @@
                     exitEditMode();
                 } else {
                     // Add new video
-                    await addDoc(collection(db, "videos"), { ...videoData, createdAt: Date.now() });
+                    await addDoc(collection(db, "videos"), { ...videoData, createdAt: Date.now(), views: 0 });
                     showStatus("Video Published Successfully!");
                     document.querySelectorAll('input').forEach(input => input.value = '');
                 }
@@ -477,8 +478,11 @@
                         <img src="${data.thumbnail}" alt="Thumbnail">
                         <div class="video-details">
                             <span class="video-title">${data.title}</span>
-                            <span class="platform-badge ${data.platform}">${data.platform}</span>
-                            <span class="platform-badge ${data.category || 'entertainment'}">${data.category === 'study' ? 'Study' : 'Entertainment'}</span>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <span class="platform-badge ${data.platform}">${data.platform}</span>
+                                <span class="platform-badge ${data.category || 'entertainment'}">${data.category === 'study' ? 'Study' : 'Entertainment'}</span>
+                                <span class="platform-badge views">👁 ${data.views || 0} Views</span>
+                            </div>
                         </div>
                     </div>
                     <div class="video-actions">
