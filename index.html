@@ -322,6 +322,17 @@
                         </select>
                     </div>
                     <div class="input-field">
+                        <label for="vidTimer">Lock Timer (Minutes)</label>
+                        <select id="vidTimer">
+                            <option value="200">200 Minutes (Default)</option>
+                            <option value="150">150 Minutes</option>
+                            <option value="120">120 Minutes</option>
+                            <option value="100">100 Minutes</option>
+                            <option value="50">50 Minutes</option>
+                            <option value="0">0 Minutes (No Lock)</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
                         <label for="driveLink">Video Link (YouTube or Google Drive)</label>
                         <input type="text" id="driveLink" placeholder="Paste YouTube or Google Drive link here">
                     </div>
@@ -373,12 +384,13 @@
             }, 4000);
         }
 
-        function enterEditMode(id, title, thumbnail, originalLink, category) {
+        function enterEditMode(id, title, thumbnail, originalLink, category, lockTimer) {
             currentEditId = id;
             document.getElementById('formTitle').textContent = "Edit Video";
             document.getElementById('vidTitle').value = title;
             document.getElementById('vidThumb').value = thumbnail;
             document.getElementById('vidCategory').value = category || 'entertainment';
+            document.getElementById('vidTimer').value = lockTimer !== undefined ? lockTimer : '200';
             document.getElementById('driveLink').value = originalLink;
             addBtn.textContent = 'Update Video';
             cancelBtn.style.display = 'block';
@@ -398,6 +410,7 @@
             const title = document.getElementById('vidTitle').value.trim();
             const thumbnail = document.getElementById('vidThumb').value.trim();
             const category = document.getElementById('vidCategory').value;
+            const lockTimer = parseInt(document.getElementById('vidTimer').value);
             const inputUrl = document.getElementById('driveLink').value.trim();
 
             if (!title || !thumbnail || !inputUrl) {
@@ -428,7 +441,7 @@
                     throw new Error("Invalid Link format. Please provide a valid YouTube or Google Drive link.");
                 }
 
-                const videoData = { title, thumbnail, videoId, platform, driveVideoId: platform === 'drive' ? videoId : null, category };
+                const videoData = { title, thumbnail, videoId, platform, driveVideoId: platform === 'drive' ? videoId : null, category, lockTimer };
 
                 if (currentEditId) {
                     // Update existing video
@@ -504,7 +517,7 @@
                 `;
 
                 item.querySelector('.btn-edit').addEventListener('click', () => {
-                    enterEditMode(id, data.title, data.thumbnail, originalLink, data.category);
+                    enterEditMode(id, data.title, data.thumbnail, originalLink, data.category, data.lockTimer);
                 });
 
                 item.querySelector('.btn-delete').addEventListener('click', async () => {
