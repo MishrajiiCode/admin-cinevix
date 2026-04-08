@@ -230,6 +230,10 @@
         .platform-badge.study { background: #fef08a; color: #854d0e; }
         .platform-badge.entertainment { background: #e9d5ff; color: #7e22ce; }
         .platform-badge.views { background: #e2e8f0; color: #475569; }
+        .platform-badge.image { background: #d1fae5; color: #059669; }
+        .platform-badge.photos { background: #fce7f3; color: #db2777; }
+        .platform-badge.other { background: #f3f4f6; color: #4b5563; }
+        .platform-badge.video { background: #e0e7ff; color: #4338ca; }
 
         .video-actions {
             display: flex;
@@ -301,16 +305,16 @@
         <div class="dashboard-grid">
             <!-- Form Panel -->
             <aside class="panel form-panel">
-                <h2 class="panel-title" id="formTitle">Upload New Video</h2>
+                <h2 class="panel-title" id="formTitle">Upload New Media</h2>
                 
                 <div id="statusMsg" class="status-msg"></div>
         
                 <div class="input-group">
                     <div class="input-field">
-                        <label for="vidTitle">Video Title</label>
+                        <label for="vidTitle">Media Title</label>
                         <input type="text" id="vidTitle" placeholder="e.g. My Awesome Video">
                     </div>
-                    <div class="input-field">
+                    <div class="input-field" id="thumbField">
                         <label for="vidThumb">Thumbnail URL</label>
                         <input type="text" id="vidThumb" placeholder="e.g. https://example.com/image.jpg">
                     </div>
@@ -322,6 +326,13 @@
                         </select>
                     </div>
                     <div class="input-field">
+                        <label for="vidMediaType">Media Type</label>
+                        <select id="vidMediaType">
+                            <option value="video">Video</option>
+                            <option value="image">Image</option>
+                        </select>
+                    </div>
+                    <div class="input-field" id="timerField">
                         <label for="vidTimer">Lock Timer (Minutes)</label>
                         <select id="vidTimer">
                             <option value="200">200 Minutes (Default)</option>
@@ -333,12 +344,12 @@
                         </select>
                     </div>
                     <div class="input-field">
-                        <label for="driveLink">Video Link (YouTube or Google Drive)</label>
-                        <input type="text" id="driveLink" placeholder="Paste YouTube or Google Drive link here">
+                        <label for="driveLink">Media Link (YouTube, Drive, Photos, or Image URL)</label>
+                        <input type="text" id="driveLink" placeholder="Paste link here">
                     </div>
                 </div>
                 
-                <button id="addBtn">Publish Video</button>
+                <button id="addBtn">Publish Media</button>
                 <button id="cancelBtn" class="cancel-edit-btn">Cancel Edit</button>
             </aside>
 
@@ -384,36 +395,68 @@
             }, 4000);
         }
 
-        function enterEditMode(id, title, thumbnail, originalLink, category, lockTimer) {
+        function enterEditMode(id, title, thumbnail, originalLink, category, lockTimer, mediaType) {
             currentEditId = id;
-            document.getElementById('formTitle').textContent = "Edit Video";
+            document.getElementById('formTitle').textContent = "Edit Media";
             document.getElementById('vidTitle').value = title;
             document.getElementById('vidThumb').value = thumbnail;
             document.getElementById('vidCategory').value = category || 'entertainment';
             document.getElementById('vidTimer').value = lockTimer !== undefined ? lockTimer : '200';
             document.getElementById('driveLink').value = originalLink;
-            addBtn.textContent = 'Update Video';
+            document.getElementById('vidMediaType').value = mediaType || 'video';
+            addBtn.textContent = 'Update Media';
             cancelBtn.style.display = 'block';
+            
+            if ((mediaType || 'video') === 'image') {
+                document.getElementById('thumbField').style.display = 'none';
+                document.getElementById('timerField').style.display = 'none';
+            } else {
+                document.getElementById('thumbField').style.display = 'block';
+                document.getElementById('timerField').style.display = 'block';
+            }
+
             // Scroll up to top of page
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function exitEditMode() {
             currentEditId = null;
-            document.getElementById('formTitle').textContent = "Upload New Video";
+            document.getElementById('formTitle').textContent = "Upload New Media";
             document.querySelectorAll('input').forEach(input => input.value = '');
-            addBtn.textContent = 'Publish Video';
+            document.getElementById('vidMediaType').value = 'video';
+            addBtn.textContent = 'Publish Media';
             cancelBtn.style.display = 'none';
+            
+            document.getElementById('thumbField').style.display = 'block';
+            document.getElementById('timerField').style.display = 'block';
         }
+
+        // Toggle fields based on Media Type selection
+        document.getElementById('vidMediaType').addEventListener('change', (e) => {
+            const thumbField = document.getElementById('thumbField');
+            const timerField = document.getElementById('timerField');
+            if (e.target.value === 'image') {
+                thumbField.style.display = 'none';
+                timerField.style.display = 'none';
+            } else {
+                thumbField.style.display = 'block';
+                timerField.style.display = 'block';
+            }
+        });
 
         addBtn.addEventListener('click', async () => {
             const title = document.getElementById('vidTitle').value.trim();
-            const thumbnail = document.getElementById('vidThumb').value.trim();
+            let thumbnail = document.getElementById('vidThumb').value.trim();
             const category = document.getElementById('vidCategory').value;
-            const lockTimer = parseInt(document.getElementById('vidTimer').value);
+            let lockTimer = parseInt(document.getElementById('vidTimer').value);
             const inputUrl = document.getElementById('driveLink').value.trim();
+            const mediaType = document.getElementById('vidMediaType').value;
 
-            if (!title || !thumbnail || !inputUrl) {
+            if (mediaType === 'image') {
+                lockTimer = 0;        // No lock timer for images (thumbnail assigned after validation)
+            }
+
+            if (!title || (!thumbnail && mediaType !== 'image') || !inputUrl) {
                 return showStatus("Please fill in all fields.", true);
             }
 
@@ -422,36 +465,42 @@
             addBtn.textContent = currentEditId ? 'Updating...' : 'Publishing...';
 
             try {
-                let videoId = null;
-                let platform = 'drive';
+                let videoId = inputUrl;
+                let platform = 'other';
                 
                 // 1. Check if it's a YouTube link
                 const ytMatch = inputUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+                const driveMatch = inputUrl.match(/(?:id=|file\/d\/)([\w-]+)/);
+                
                 if (ytMatch) {
                     videoId = ytMatch[1];
                     platform = 'youtube';
-                } else {
-                    // 2. Check if it's a Google Drive link
-                    const driveMatch = inputUrl.match(/(?:id=|file\/d\/)([\w-]+)/);
-                    videoId = driveMatch ? driveMatch[1] : null;
+                } else if (driveMatch) {
+                    videoId = driveMatch[1];
                     platform = 'drive';
+                } else if (inputUrl.includes('photos.app.goo.gl') || inputUrl.includes('photos.google.com')) {
+                    platform = 'photos';
+                } else if (inputUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+                    platform = 'image';
+                }
+                
+                if (mediaType === 'image') {
+                    // If it's a Google Photos/Drive link, use a default image gallery placeholder to prevent 403 errors
+                    const isDirectImage = platform === 'image' || inputUrl.match(/\.(jpeg|jpg|gif|png|webp.*)$/i);
+                    thumbnail = isDirectImage ? inputUrl : 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=500&auto=format&fit=crop';
                 }
 
-                if (!videoId) {
-                    throw new Error("Invalid Link format. Please provide a valid YouTube or Google Drive link.");
-                }
-
-                const videoData = { title, thumbnail, videoId, platform, driveVideoId: platform === 'drive' ? videoId : null, category, lockTimer };
+                const videoData = { title, thumbnail, videoId, platform, driveVideoId: platform === 'drive' ? videoId : null, category, lockTimer, mediaType };
 
                 if (currentEditId) {
                     // Update existing video
                     await updateDoc(doc(db, "videos", currentEditId), videoData);
-                    showStatus("Video Updated Successfully!");
+                    showStatus("Media Updated Successfully!");
                     exitEditMode();
                 } else {
                     // Add new video
                     await addDoc(collection(db, "videos"), { ...videoData, createdAt: Date.now(), views: 0 });
-                    showStatus("Video Published Successfully!");
+                    showStatus("Media Published Successfully!");
                     document.querySelectorAll('input').forEach(input => input.value = '');
                 }
             } catch (e) {
@@ -459,7 +508,7 @@
             } finally {
                 // Reset button state
                 addBtn.disabled = false;
-                addBtn.textContent = currentEditId ? 'Update Video' : 'Publish Video';
+                addBtn.textContent = currentEditId ? 'Update Media' : 'Publish Media';
             }
         });
 
@@ -482,7 +531,9 @@
                 // Reconstruct the original link so it can be edited
                 const originalLink = data.platform === 'youtube' 
                     ? `https://youtu.be/${data.videoId}`
-                    : `https://drive.google.com/file/d/${data.driveVideoId || data.videoId}/view`;
+                    : data.platform === 'drive'
+                        ? `https://drive.google.com/file/d/${data.driveVideoId || data.videoId}/view`
+                        : data.videoId;
 
                 const item = document.createElement('div');
                 item.className = 'video-item';
@@ -493,6 +544,7 @@
                             <span class="video-title">${data.title}</span>
                             <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                                 <span class="platform-badge ${data.platform}">${data.platform}</span>
+                                <span class="platform-badge ${data.mediaType || 'video'}">${(data.mediaType || 'video').toUpperCase()}</span>
                                 <span class="platform-badge ${data.category || 'entertainment'}">${data.category === 'study' ? 'Study' : 'Entertainment'}</span>
                                 <span class="platform-badge views">👁 ${data.views || 0} Views</span>
                             </div>
@@ -517,7 +569,7 @@
                 `;
 
                 item.querySelector('.btn-edit').addEventListener('click', () => {
-                    enterEditMode(id, data.title, data.thumbnail, originalLink, data.category, data.lockTimer);
+                    enterEditMode(id, data.title, data.thumbnail, originalLink, data.category, data.lockTimer, data.mediaType);
                 });
 
                 item.querySelector('.btn-delete').addEventListener('click', async () => {
