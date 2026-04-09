@@ -614,7 +614,7 @@
                 item.className = 'video-item';
                 item.innerHTML = `
                     <div class="video-info">
-                        <img src="${data.thumbnail}" alt="Thumbnail">
+                        <img src="${data.thumbnail}" alt="Thumbnail" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=500&auto=format&fit=crop';">
                         <div class="video-details">
                             <span class="video-title">${data.title}</span>
                             <div style="display: flex; gap: 6px; flex-wrap: wrap;">
