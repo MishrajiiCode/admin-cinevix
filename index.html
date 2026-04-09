@@ -54,6 +54,8 @@
 <body>
     <div class="admin-card">
         <h2>Update Photos Link</h2>
+        <input type="text" id="title-input" placeholder="Enter Video Title (e.g. My Vacation)">
+        <input type="text" id="thumb-input" placeholder="Paste Thumbnail Image URL (Optional)">
         <input type="text" id="link-input" placeholder="Paste Google Photos URL here">
         <button id="save-btn">Save to Firestore</button>
         <p id="status"></p>
@@ -79,11 +81,13 @@
 
         document.getElementById('save-btn').addEventListener('click', async () => {
             const urlInput = document.getElementById('link-input').value;
+            const titleInput = document.getElementById('title-input').value;
+            const thumbInput = document.getElementById('thumb-input').value;
             const statusEl = document.getElementById('status');
             
-            if (!urlInput) {
+            if (!urlInput || !titleInput) {
                 statusEl.style.color = "red";
-                statusEl.innerText = "Please enter a valid link!";
+                statusEl.innerText = "Please enter both a title and a valid link!";
                 return;
             }
 
@@ -93,11 +97,15 @@
             try {
                 // Add a new document to the "shared_links" collection
                 await addDoc(collection(db, "shared_links"), {
+                    title: titleInput,
+                    thumbnailUrl: thumbInput || "https://via.placeholder.com/350x200.png?text=Play+Video",
                     url: urlInput,
                     timestamp: serverTimestamp() // Keeps track of when it was added
                 });
                 statusEl.style.color = "green";
                 statusEl.innerText = "Link successfully saved to database!";
+                document.getElementById('title-input').value = ""; // clear input
+                document.getElementById('thumb-input').value = ""; // clear input
                 document.getElementById('link-input').value = ""; // clear input
             } catch (error) {
                 console.error("Error adding document: ", error);
