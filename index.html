@@ -332,17 +332,6 @@
                             <option value="image">Image</option>
                         </select>
                     </div>
-                    <div class="input-field" id="timerField">
-                        <label for="vidTimer">Lock Timer (Minutes)</label>
-                        <select id="vidTimer">
-                            <option value="200">200 Minutes (Default)</option>
-                            <option value="150">150 Minutes</option>
-                            <option value="120">120 Minutes</option>
-                            <option value="100">100 Minutes</option>
-                            <option value="50">50 Minutes</option>
-                            <option value="0">0 Minutes (No Lock)</option>
-                        </select>
-                    </div>
                     <div class="input-field">
                         <label for="driveLink">Media Link (YouTube, Drive, Photos, or Image URL)</label>
                         <input type="text" id="driveLink" placeholder="Paste link here">
@@ -395,13 +384,12 @@
             }, 4000);
         }
 
-        function enterEditMode(id, title, thumbnail, originalLink, category, lockTimer, mediaType) {
+        function enterEditMode(id, title, thumbnail, originalLink, category, mediaType) {
             currentEditId = id;
             document.getElementById('formTitle').textContent = "Edit Media";
             document.getElementById('vidTitle').value = title;
             document.getElementById('vidThumb').value = thumbnail;
             document.getElementById('vidCategory').value = category || 'entertainment';
-            document.getElementById('vidTimer').value = lockTimer !== undefined ? lockTimer : '200';
             document.getElementById('driveLink').value = originalLink;
             document.getElementById('vidMediaType').value = mediaType || 'video';
             addBtn.textContent = 'Update Media';
@@ -409,10 +397,8 @@
             
             if ((mediaType || 'video') === 'image') {
                 document.getElementById('thumbField').style.display = 'none';
-                document.getElementById('timerField').style.display = 'none';
             } else {
                 document.getElementById('thumbField').style.display = 'block';
-                document.getElementById('timerField').style.display = 'block';
             }
 
             // Scroll up to top of page
@@ -428,19 +414,15 @@
             cancelBtn.style.display = 'none';
             
             document.getElementById('thumbField').style.display = 'block';
-            document.getElementById('timerField').style.display = 'block';
         }
 
         // Toggle fields based on Media Type selection
         document.getElementById('vidMediaType').addEventListener('change', (e) => {
             const thumbField = document.getElementById('thumbField');
-            const timerField = document.getElementById('timerField');
             if (e.target.value === 'image') {
                 thumbField.style.display = 'none';
-                timerField.style.display = 'none';
             } else {
                 thumbField.style.display = 'block';
-                timerField.style.display = 'block';
             }
         });
 
@@ -448,13 +430,8 @@
             const title = document.getElementById('vidTitle').value.trim();
             let thumbnail = document.getElementById('vidThumb').value.trim();
             const category = document.getElementById('vidCategory').value;
-            let lockTimer = parseInt(document.getElementById('vidTimer').value);
             const inputUrl = document.getElementById('driveLink').value.trim();
             const mediaType = document.getElementById('vidMediaType').value;
-
-            if (mediaType === 'image') {
-                lockTimer = 0;        // No lock timer for images (thumbnail assigned after validation)
-            }
 
             if (!title || (!thumbnail && mediaType !== 'image') || !inputUrl) {
                 return showStatus("Please fill in all fields.", true);
@@ -490,7 +467,7 @@
                     thumbnail = isDirectImage ? inputUrl : 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=500&auto=format&fit=crop';
                 }
 
-                const videoData = { title, thumbnail, videoId, platform, driveVideoId: platform === 'drive' ? videoId : null, category, lockTimer, mediaType };
+                const videoData = { title, thumbnail, videoId, platform, driveVideoId: platform === 'drive' ? videoId : null, category, mediaType };
 
                 if (currentEditId) {
                     // Update existing video
@@ -569,7 +546,7 @@
                 `;
 
                 item.querySelector('.btn-edit').addEventListener('click', () => {
-                    enterEditMode(id, data.title, data.thumbnail, originalLink, data.category, data.lockTimer, data.mediaType);
+                    enterEditMode(id, data.title, data.thumbnail, originalLink, data.category, data.mediaType);
                 });
 
                 item.querySelector('.btn-delete').addEventListener('click', async () => {
