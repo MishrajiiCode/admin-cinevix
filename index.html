@@ -351,16 +351,28 @@
                 </main>
 
                 <aside class="panel" style="margin-top: 30px;">
-                    <h2 class="panel-title">Manage Special Share Link</h2>
-                    <p style="font-size: 14px; color: #64748b; margin-top: -20px; margin-bottom: 24px;">Set a single, special link that can be shared via a unique URL.</p>
+                    <h2 class="panel-title">Manage Featured Links</h2>
+                    <p style="font-size: 14px; color: #64748b; margin-top: -20px; margin-bottom: 24px;">Add special highlighted links that appear at the top of the app.</p>
                     <div id="shareLinkStatusMsg" class="status-msg"></div>
                     <div class="input-group">
+                        <div class="input-field">
+                            <label for="featTitle">Link Title</label>
+                            <input type="text" id="featTitle" placeholder="e.g. Special Announcement">
+                        </div>
+                        <div class="input-field">
+                            <label for="featCategory">Category</label>
+                            <select id="featCategory">
+                                <option value="entertainment">Entertainment</option>
+                                <option value="study">Study</option>
+                            </select>
+                        </div>
                         <div class="input-field">
                             <label for="shareableLink">Video/Photo URL</label>
                             <input type="text" id="shareableLink" placeholder="Paste any URL here">
                         </div>
                     </div>
-                    <button id="saveShareLinkBtn">Save Special Link</button>
+                    <button id="saveShareLinkBtn">Add Featured Link</button>
+                    <div id="featuredList" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;"></div>
                 </aside>
             </div>
         </div>
@@ -507,11 +519,13 @@
 
         cancelBtn.addEventListener('click', exitEditMode);
 
-        // --- Special Share Link Logic ---
+        // --- Featured Links Logic ---
+        const featTitleInput = document.getElementById('featTitle');
+        const featCategoryInput = document.getElementById('featCategory');
         const shareableLinkInput = document.getElementById('shareableLink');
         const saveShareLinkBtn = document.getElementById('saveShareLinkBtn');
         const shareLinkStatusMsg = document.getElementById('shareLinkStatusMsg');
-        const shareLinkDocRef = doc(db, "shared_links", "latest_link");
+        const featuredList = document.getElementById('featuredList');
 
         function showShareLinkStatus(message, isError = false) {
             shareLinkStatusMsg.textContent = message;
@@ -522,34 +536,57 @@
             }, 4000);
         }
 
-        // Fetch the current link on page load
-        getDoc(shareLinkDocRef).then(docSnap => {
-            if (docSnap.exists()) {
-                shareableLinkInput.value = docSnap.data().url || '';
-            }
-        }).catch(e => console.error("Error fetching share link:", e));
-
         saveShareLinkBtn.addEventListener('click', async () => {
+            const title = featTitleInput.value.trim();
+            const category = featCategoryInput.value;
             const url = shareableLinkInput.value.trim();
-            if (!url) {
-                return showShareLinkStatus("Please enter a URL.", true);
+            
+            if (!title || !url) {
+                return showShareLinkStatus("Please enter both a Title and URL.", true);
             }
 
             saveShareLinkBtn.disabled = true;
-            saveShareLinkBtn.textContent = 'Saving...';
+            saveShareLinkBtn.textContent = 'Adding...';
 
             try {
-                await setDoc(shareLinkDocRef, {
+                await addDoc(collection(db, "featured_links"), {
+                    title: title,
+                    category: category,
                     url: url,
                     timestamp: Date.now()
                 });
-                showShareLinkStatus("Special link saved successfully!");
+                showShareLinkStatus("Featured link added successfully!");
+                featTitleInput.value = '';
+                shareableLinkInput.value = '';
             } catch (e) {
-                showShareLinkStatus("Error saving link: " + e.message, true);
+                showShareLinkStatus("Error adding link: " + e.message, true);
             } finally {
                 saveShareLinkBtn.disabled = false;
-                saveShareLinkBtn.textContent = 'Save Special Link';
+                saveShareLinkBtn.textContent = 'Add Featured Link';
             }
+        });
+
+        // Fetch and display featured links list
+        onSnapshot(query(collection(db, "featured_links"), orderBy("timestamp", "desc")), (snapshot) => {
+            featuredList.innerHTML = '';
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                const div = document.createElement('div');
+                div.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;";
+                div.innerHTML = `
+                    <div style="overflow: hidden; padding-right: 10px;">
+                        <div style="font-weight: 600; font-size: 14px; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${data.title}</div>
+                        <div style="font-size: 12px; color: #64748b; margin-top: 4px;"><span style="text-transform: capitalize; font-weight: 600; color: #3b82f6;">${data.category}</span> • <a href="${data.url}" target="_blank" style="color: #64748b;">Link</a></div>
+                    </div>
+                    <button class="action-btn btn-delete" style="padding: 6px 10px; width: auto; font-size: 12px;">Delete</button>
+                `;
+                div.querySelector('button').addEventListener('click', async () => {
+                    if(confirm(`Remove featured link "${data.title}"?`)) {
+                        await deleteDoc(doc(db, "featured_links", docSnap.id));
+                    }
+                });
+                featuredList.appendChild(div);
+            });
         });
 
         // Fetch and display uploaded videos
