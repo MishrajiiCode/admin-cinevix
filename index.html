@@ -10,6 +10,7 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f1f5f9;
+            scroll-behavior: smooth;
             margin: 0;
             color: #334155;
         }
@@ -38,7 +39,7 @@
 
         .dashboard-grid {
             display: grid;
-            grid-template-columns: 380px 1fr;
+            grid-template-columns: 420px 1fr;
             gap: 30px;
             align-items: start;
         }
@@ -270,6 +271,25 @@
             background-color: #f1f5f9;
             color: #334155;
         }
+        
+        .copy-btn-wrapper {
+            position: relative;
+        }
+        .copy-btn-wrapper .copy-success-msg {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #22c55e;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s, top 0.3s;
+        }
 
         @media (max-width: 900px) {
             .dashboard-grid {
@@ -343,16 +363,34 @@
             </aside>
 
             <!-- List Panel -->
-            <main class="panel list-panel">
-                <h2 class="panel-title">Manage Uploaded Videos</h2>
-                <div class="video-list" id="videoList"></div>
-            </main>
+            <div>
+                <main class="panel list-panel">
+                    <h2 class="panel-title">Manage Uploaded Videos</h2>
+                    <div class="video-list" id="videoList"></div>
+                </main>
+
+                <aside class="panel" style="margin-top: 30px;">
+                    <h2 class="panel-title">Manage Special Share Link</h2>
+                    <p style="font-size: 14px; color: #64748b; margin-top: -20px; margin-bottom: 24px;">Set a single, special link that can be shared via a unique URL.</p>
+                    <div id="shareLinkStatusMsg" class="status-msg"></div>
+                    <div class="input-group">
+                        <div class="input-field">
+                            <label for="shareableLink">Video/Photo URL</label>
+                            <input type="text" id="shareableLink" placeholder="Paste any URL here">
+                        </div>
+                    </div>
+                    <button id="saveShareLinkBtn">Save Special Link</button>
+                    <div class="copy-btn-wrapper" style="margin-top: 10px;">
+                        <button id="copyShareLinkBtn" class="cancel-edit-btn" style="display: block;">Copy Sharable Page URL</button>
+                    </div>
+                </aside>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAy-7QGZ05wNf0fLG1-AY2FxJy_fdILdoM",
@@ -490,6 +528,67 @@
         });
 
         cancelBtn.addEventListener('click', exitEditMode);
+
+        // --- Special Share Link Logic ---
+        const shareableLinkInput = document.getElementById('shareableLink');
+        const saveShareLinkBtn = document.getElementById('saveShareLinkBtn');
+        const copyShareLinkBtn = document.getElementById('copyShareLinkBtn');
+        const shareLinkStatusMsg = document.getElementById('shareLinkStatusMsg');
+        const shareLinkDocRef = doc(db, "shared_links", "latest_link");
+
+        function showShareLinkStatus(message, isError = false) {
+            shareLinkStatusMsg.textContent = message;
+            shareLinkStatusMsg.className = `status-msg ${isError ? 'error' : 'success'}`;
+            setTimeout(() => {
+                shareLinkStatusMsg.style.display = 'none';
+                shareLinkStatusMsg.className = 'status-msg';
+            }, 4000);
+        }
+
+        // Fetch the current link on page load
+        getDoc(shareLinkDocRef).then(docSnap => {
+            if (docSnap.exists()) {
+                shareableLinkInput.value = docSnap.data().url || '';
+            }
+        }).catch(e => console.error("Error fetching share link:", e));
+
+        saveShareLinkBtn.addEventListener('click', async () => {
+            const url = shareableLinkInput.value.trim();
+            if (!url) {
+                return showShareLinkStatus("Please enter a URL.", true);
+            }
+
+            saveShareLinkBtn.disabled = true;
+            saveShareLinkBtn.textContent = 'Saving...';
+
+            try {
+                await setDoc(shareLinkDocRef, {
+                    url: url,
+                    timestamp: Date.now()
+                });
+                showShareLinkStatus("Special link saved successfully!");
+            } catch (e) {
+                showShareLinkStatus("Error saving link: " + e.message, true);
+            } finally {
+                saveShareLinkBtn.disabled = false;
+                saveShareLinkBtn.textContent = 'Save Special Link';
+            }
+        });
+
+        copyShareLinkBtn.addEventListener('click', () => {
+            const sharePageUrl = window.location.href.replace('index.html', 'share.html');
+            navigator.clipboard.writeText(sharePageUrl).then(() => {
+                const msg = document.createElement('div');
+                msg.className = 'copy-success-msg';
+                msg.textContent = 'Copied!';
+                copyShareLinkBtn.parentNode.appendChild(msg);
+                setTimeout(() => { msg.style.opacity = '1'; msg.style.top = '-35px'; }, 10);
+                setTimeout(() => {
+                    msg.style.opacity = '0';
+                    setTimeout(() => msg.remove(), 300);
+                }, 2000);
+            }).catch(err => alert('Failed to copy link.'));
+        });
 
         // Fetch and display uploaded videos
         const q = query(collection(db, "videos"), orderBy("createdAt", "desc"));
